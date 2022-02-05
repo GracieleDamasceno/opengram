@@ -1,0 +1,24 @@
+{
+  "name": "opengram",
+  "version": "0.0.1",
+  "description": "\u0016 A POC of Instagram main functionalities.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GracieleDamasceno/opengram.git"
+  },
+  "author": "GracieleDamasceno",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/GracieleDamasceno/opengram/issues"
+  },
+  "homepage": "https://github.com/GracieleDamasceno/opengram#readme",
+  "dependencies": {
+    "body-parser": "^1.19.1",
+    "express": "^4.17.2",
+    "mongoose": "^6.2.0"
+  }
+}
