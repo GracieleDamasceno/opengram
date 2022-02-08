@@ -1,5 +1,26 @@
-const user = require('../model/user.model');
+const database = require("../configuration/connection.configuration.js");
+const User = require("../model/user.model.js")
 
-exports.test = function (req, res) {
-    res.send('Controller is up and running!');
+exports.create = (req, res) => {
+    let user = new User({
+        username: req.body.username,
+        name: req.body.name,
+        email: req.body.email
+    });
+    user.save(function (err) {
+        if (err) {
+            return next(err);
+        }
+        res.send('User created successfully')
+    })
 };
+exports.update = (req, res) => {
+  
+};
+exports.delete = (req, res) => {
+  
+};
+
+exports.find = (req, res) => {
+    res.send("Opengram is up and running!")
+}
