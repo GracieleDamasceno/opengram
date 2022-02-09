@@ -1,11 +1,12 @@
 {
   "name": "opengram",
   "version": "0.0.1",
-  "description": "\u0016 A POC of Instagram main functionalities.",
+  "description": "A POC of Instagram main functionalities.",
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "nodemon server.js"
   },
   "repository": {
     "type": "git",
@@ -18,10 +19,9 @@
   },
   "homepage": "https://github.com/GracieleDamasceno/opengram#readme",
   "dependencies": {
-    "body-parser": "^1.19.1",
-    "cors": "^2.8.5",
-    "dotenv": "^16.0.0",
-    "express": "^4.17.2",
-    "mongoose": "^6.2.0"
+    "express": "^4.17.2"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.15"
   }
 }
