@@ -19,7 +19,9 @@
   },
   "homepage": "https://github.com/GracieleDamasceno/opengram#readme",
   "dependencies": {
-    "express": "^4.17.2"
+    "dotenv": "^16.0.0",
+    "express": "^4.17.2",
+    "mongoose": "^6.2.1"
   },
   "devDependencies": {
     "nodemon": "^2.0.15"

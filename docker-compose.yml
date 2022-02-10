@@ -1,0 +1,44 @@
+version: '3'
+services:
+  app:
+    build:
+      context: . 
+      dockerfile: Dockerfile
+    image: nodejs
+    container_name: opengram
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - MONGO_USERNAME=$MONGO_USERNAME
+      - MONGO_PASSWORD=$MONGO_PASSWORD
+      - MONGO_HOSTNAME=db
+      - MONGO_PORT=$MONGO_PORT
+      - MONGO_DB=$MONGO_DB
+    ports:
+    - $APPLICATION_PORT:$APPLICATION_PORT
+    volumes:
+    - .:/home/node/app
+    - node_modules:/home/node/app/node_modules
+    networks:
+    - opengram-network
+
+  database:
+    image: 'mongo'
+    container_name: mongo
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=$MONGO_USERNAME
+      - MONGO_INITDB_ROOT_PASSWORD=$MONGO_PASSWORD
+      - MONGO_INITDB_DATABASE=$MONGO_DB
+    volumes:     
+      - ./docker-entrypoint-initdb.d/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks:
+      - opengram-network  
+
+networks:
+  opengram-network:
+    driver: bridge
+volumes:
+  dbdata:
+  node_modules:  
