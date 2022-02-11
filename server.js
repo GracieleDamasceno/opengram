@@ -1,4 +1,5 @@
 require('dotenv').config()
+const mongo = require("./config/database")
 const express = require("express");
 const bodyParser = require("body-parser");
 const app = express();

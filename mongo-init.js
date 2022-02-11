@@ -1,5 +1,3 @@
-require('dotenv').config()
-
 db.createUser(
     {
         user: process.env.MONGO_USERNAME,
