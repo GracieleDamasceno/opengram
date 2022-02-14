@@ -14,8 +14,8 @@ router.post("/account/join", async (req, res) => {
                 username: req.body.username,
                 fullName: req.body.fullName,
                 email: req.body.email,
-                password: hashedPassword,
-                joined: { type: Date, default: Date.now }
+                password: hashedPassword
+            
             });
             res.status(202).send(insertUser);
         }else{
