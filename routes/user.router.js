@@ -4,6 +4,8 @@ const bcrypt = require("bcryptjs");
 
 const User = require("../model/user.model.js");
 
+var session;
+
 router.post("/account/join", async (req, res) => {
     console.log("[LOG] - Request to create a new user: ", req.body)
     try{
@@ -11,7 +13,6 @@ router.post("/account/join", async (req, res) => {
         if(!user){
             const hashedPassword = await bcrypt.hash(req.body.password, 10);
             const insertUser = await User.create({
-                username: req.body.username,
                 fullName: req.body.fullName,
                 email: req.body.email,
                 password: hashedPassword
@@ -35,6 +36,9 @@ router.post("/account/sign-in", async (req, res) =>{
         if(user){
             const comparison = await bcrypt.compare(req.body.password, user.password);
             if(comparison){
+                console.log(req.session);
+                session = req.session;
+                session.email = req.body.email;
                 res.status(200).json({message:"Successfully in!"});
             }else{
                 res.status(401).json({error:"Wrong password or e-mail address"});
@@ -48,4 +52,8 @@ router.post("/account/sign-in", async (req, res) =>{
     }
 });
 
+router.post("/account/logout", async (req, res) =>{
+    req.session.destroy();
+    res.redirect("/");
+});
 module.exports = router;
