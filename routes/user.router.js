@@ -13,7 +13,9 @@ router.post("/account/join", async (req, res) => {
         if(!user){
             const hashedPassword = await bcrypt.hash(req.body.password, 10);
             const insertUser = await User.create({
-                fullName: req.body.fullName,
+                firstName: req.body.firstName,
+                lastName: req.body.lastName,
+                username: req.body.username,
                 email: req.body.email,
                 password: hashedPassword
             
@@ -32,6 +34,7 @@ router.post("/account/join", async (req, res) => {
 router.post("/account/sign-in", async (req, res) =>{
     console.log("[LOG] - Request to log-in user: ", req.body.email)
     try{
+        console.log(req.body)
         const user = await User.findOne({email:req.body.email});
         if(user){
             const comparison = await bcrypt.compare(req.body.password, user.password);

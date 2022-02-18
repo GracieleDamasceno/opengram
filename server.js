@@ -1,16 +1,23 @@
 require('dotenv').config()
 const mongo = require("./config/database")
 const express = require("express");
+var cors = require('cors');
 const app = express();
 const userRoutes = require("./routes/user.router")
 const oneDay = 1000 * 60 * 60 * 24;
 const cookieParser = require("cookie-parser");
+const bodyParser = require('body-parser');
 const sessions = require('express-session');
+var corsOptions = {
+    origin: "http://localhost:3000",
+    optionsSuccessStatus: 200
+};
 
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
 app.use(userRoutes);
 app.use(cookieParser());
+app.use(cors(corsOptions))
 app.use(sessions({
     secret: process.env.SESSION_SECRET,
     saveUninitialized: true,

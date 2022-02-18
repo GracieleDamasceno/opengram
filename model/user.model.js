@@ -3,7 +3,8 @@ const Schema = mongoose.Schema;
 
 const userSchema = new Schema({
     username: String,
-    fullName: String,
+    firstName: String,
+    lastName: String,
     email: String,
     password: String,
     joined: { type: Date, default: Date.now }
