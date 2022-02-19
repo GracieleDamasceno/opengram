@@ -34,15 +34,11 @@ router.post("/account/join", async (req, res) => {
 router.post("/account/sign-in", async (req, res) =>{
     console.log("[LOG] - Request to log-in user: ", req.body.email)
     try{
-        console.log(req.body)
         const user = await User.findOne({email:req.body.email});
         if(user){
             const comparison = await bcrypt.compare(req.body.password, user.password);
             if(comparison){
-                console.log(req.session);
-                session = req.session;
-                session.email = req.body.email;
-                res.status(200).json({message:"Successfully in!"});
+                res.status(200).json({username: user.username, email: user.email});
             }else{
                 res.status(401).json({error:"Wrong password or e-mail address"});
             }
