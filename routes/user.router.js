@@ -9,8 +9,9 @@ var session;
 router.post("/account/join", async (req, res) => {
     console.log("[LOG] - Request to create a new user: ", req.body)
     try{
-        const user = await User.findOne({email:req.body.email});
-        if(!user){
+        const userEmail = await User.findOne({email:req.body.email});
+        const userUsername = await User.findOne({username:req.body.username});
+        if(!userEmail && !userUsername){
             const hashedPassword = await bcrypt.hash(req.body.password, 10);
             const insertUser = await User.create({
                 firstName: req.body.firstName,
@@ -18,11 +19,16 @@ router.post("/account/join", async (req, res) => {
                 username: req.body.username,
                 email: req.body.email,
                 password: hashedPassword
-            
             });
-            res.status(202).send(insertUser);
+            console.log(insertUser)
+            res.statusMessage = "User successfully created";
+            res.status(202).end();
         }else{
-            res.status(409).json({error:"E-mail address already registered"});
+            if(userEmail){
+                res.status(409).send({ error: "E-mail address already registered." });
+            }else if(userUsername){
+                res.status(409).send({ error: "Username address already registered." });
+            }
         }
        
     } catch(error){
@@ -38,16 +44,23 @@ router.post("/account/sign-in", async (req, res) =>{
         if(user){
             const comparison = await bcrypt.compare(req.body.password, user.password);
             if(comparison){
-                res.status(200).json({username: user.username, email: user.email});
+                req.session.username = user.username;
+                req.session.email = user.email;
+                req.session.firstName = user.firstName;
+                req.session.lastName = user.lastName;
+                res.send(req.session);
             }else{
-                res.status(401).json({error:"Wrong password or e-mail address"});
+                res.statusMessage = "Wrong password or e-mail address";
+                res.status(401).end();
             }
         }else{
-            res.status(401).json({error:"Wrong password or e-mail address"});
+            res.statusMessage = "Wrong password or e-mail address";
+            res.status(401).end();
         }
     }catch(error){
         console.log("[LOG] - Error at log-in: ", error);
-        res.status(500).json(error);
+        res.statusMessage = "Error while logging in: "+error;
+        res.status(500).end();
     }
 });
 

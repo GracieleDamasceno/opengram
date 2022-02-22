@@ -15,15 +15,17 @@ var corsOptions = {
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
-app.use(userRoutes);
 app.use(cookieParser());
 app.use(cors(corsOptions))
 app.use(sessions({
+    name: "session",
     secret: process.env.SESSION_SECRET,
     saveUninitialized: true,
     cookie: { maxAge: oneDay },
     resave: false 
 }));
+
+app.use(userRoutes);
 
 app.listen(process.env.APPLICATION_PORT  || 8080, () => {
     console.log("[LOG] - Application is running at port ", process.env.APPLICATION_PORT);
