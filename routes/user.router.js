@@ -44,10 +44,13 @@ router.post("/account/sign-in", async (req, res) =>{
         if(user){
             const comparison = await bcrypt.compare(req.body.password, user.password);
             if(comparison){
+                req.session.userId = user._id.toString();
                 req.session.username = user.username;
                 req.session.email = user.email;
                 req.session.firstName = user.firstName;
                 req.session.lastName = user.lastName;
+                req.session.birthday = user.birthday;
+                req.session.about = user.about;
                 res.send(req.session);
             }else{
                 res.statusMessage = "Wrong password or e-mail address";
@@ -68,4 +71,25 @@ router.post("/account/logout", async (req, res) =>{
     req.session.destroy();
     res.redirect("/");
 });
+
+router.patch("/profile/update", async(req, res) => {
+    try{
+        console.log("Updating profile of "+req.body.email)
+
+        const updateUser = await User.findByIdAndUpdate(req.body.id, {$set:req.body});
+        req.session.username = updateUser.username;
+        req.session.email = updateUser.email;
+        req.session.firstName = updateUser.firstName;
+        req.session.lastName = updateUser.lastName;
+        req.session.birthday = updateUser.birthday;
+        req.session.about = updateUser.about;
+
+        res.send(req.session);
+    }catch(error){
+        console.log("[LOG] - Error while updating profile ", error);
+        res.statusMessage = "Error while updating profile: "+error;
+        res.status(500).end();
+    }
+
+})
 module.exports = router;

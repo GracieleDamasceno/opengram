@@ -7,6 +7,8 @@ const userSchema = new Schema({
     lastName: String,
     email: String,
     password: String,
+    birthday: Date,
+    about: String,
     joined: { type: Date, default: Date.now }
 });
 
