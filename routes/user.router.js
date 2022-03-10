@@ -49,8 +49,7 @@ router.post("/account/sign-in", async (req, res) =>{
                 req.session.email = user.email;
                 req.session.firstName = user.firstName;
                 req.session.lastName = user.lastName;
-                req.session.birthday = user.birthday;
-                req.session.about = user.about;
+                req.session.albumNumber = user.albumNumber;
                 res.send(req.session);
             }else{
                 res.statusMessage = "Wrong password or e-mail address";
@@ -76,17 +75,16 @@ router.patch("/profile/update", async(req, res) => {
     try{
         console.log("Updating profile of "+req.body.email)
 
-        const updateUser = await User.findByIdAndUpdate(req.body.id, {$set:req.body});
+        const updateUser = await User.findByIdAndUpdate(req.body.id, {$set:req.body}, {new: true});
         req.session.username = updateUser.username;
         req.session.email = updateUser.email;
         req.session.firstName = updateUser.firstName;
         req.session.lastName = updateUser.lastName;
-        req.session.birthday = updateUser.birthday;
         req.session.about = updateUser.about;
 
         res.send(req.session);
     }catch(error){
-        console.log("[LOG] - Error while updating profile ", error);
+        console.log("[LOG] - Error while updating profile: ", error);
         res.statusMessage = "Error while updating profile: "+error;
         res.status(500).end();
     }

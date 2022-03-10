@@ -4,6 +4,7 @@ const express = require("express");
 var cors = require('cors');
 const app = express();
 const userRoutes = require("./routes/user.router")
+const albumRoutes = require("./routes/album.routes.js")
 const oneDay = 1000 * 60 * 60 * 24;
 const cookieParser = require("cookie-parser");
 const bodyParser = require('body-parser');
@@ -26,6 +27,7 @@ app.use(sessions({
 }));
 
 app.use(userRoutes);
+app.use(albumRoutes);
 
 app.listen(process.env.APPLICATION_PORT  || 8080, () => {
     console.log("[LOG] - Application is running at port ", process.env.APPLICATION_PORT);
