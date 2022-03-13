@@ -1,12 +1,13 @@
 const express = require("express");
 const router = express.Router();
-const multer = require('multer')
-var path = require('path')
-const fs = require('fs')
+const multer = require('multer');
+const sharp = require('sharp');
+const fs = require('fs');
+var path = require('path');
 
 const Album = require("../model/album.model.js");
 const User = require("../model/user.model.js");
-var ObjectId = require('mongoose').Types.ObjectId; 
+var ObjectId = require('mongoose').Types.ObjectId;
 var albumLocation = "";
 
 const multerStorage = multer.diskStorage({
@@ -25,7 +26,7 @@ const multerStorage = multer.diskStorage({
 const upload = multer({ storage: multerStorage });
 
 router.post("/album/create/", upload.any("photos"), async (req, res) => {
-    console.log("[LOG] - Request to upload photos: ", req.body);
+    console.log("[LOG] - Request to upload photos: ", req.body.albumInfo);
     const json = JSON.parse(req.body.albumInfo);
 
     const newAlbum = Album.create({
@@ -35,9 +36,7 @@ router.post("/album/create/", upload.any("photos"), async (req, res) => {
         albumOwner: json.userId,
     });
 
-    const user = User.findByIdAndUpdate(
-        { _id: json.userId }, { $inc: { albumNumber: 1 } }, { new: true }
-    );
+    const user = await User.findByIdAndUpdate({ _id: json.userId }, { $inc: { albumNumber: 1 } }, { new: true });
 
     req.session.albumNumber = user.albumNumber;
     res.send(req.session);
@@ -45,8 +44,7 @@ router.post("/album/create/", upload.any("photos"), async (req, res) => {
 });
 
 router.get("/album", async (req, res) => {
-    var mockedOwnerId = "6227f2e8f16889334383f13f";
-    const albums = await Album.find({ albumOwner: new ObjectId(mockedOwnerId) });
+    const albums = await Album.find({ albumOwner: new ObjectId(req.query.id) });
     res.send(albums);
 });
 
@@ -55,7 +53,15 @@ router.post("/album/thumbnail", async (req, res) => {
     var files = fs.readdirSync(req.body.albumFolder);
     var chosenFile = files[Math.floor(Math.random() * files.length)];
     var imagePath = `${req.body.albumFolder}/${chosenFile}`;
-    res.sendFile(imagePath);
+
+    var image = await sharp(imagePath)
+        .resize({
+            fit: sharp.fit.contain,
+            width: 800
+        }).sharpen()
+        .toBuffer();
+
+    res.send(image);
 });
 
 module.exports = router;
