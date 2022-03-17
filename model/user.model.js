@@ -7,8 +7,9 @@ const userSchema = new Schema({
     lastName: String,
     email: String,
     password: String,
-    about: String,
     albumNumber: { type: Number, default: 1 },
+    photosNumber: { type: Number, default: 0 },
+    videosNumber: { type: Number, default: 0 },
     joined: { type: Date, default: Date.now }
 });
 

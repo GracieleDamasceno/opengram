@@ -44,24 +44,40 @@ router.post("/album/create/", upload.any("photos"), async (req, res) => {
 });
 
 router.get("/album", async (req, res) => {
-    const albums = await Album.find({ albumOwner: new ObjectId(req.query.id) });
+    var albums;
+    if(req.query.pagination === "4"){
+        albums = await Album.find({ albumOwner: new ObjectId(req.query.id) })
+        .sort('-albumCreation')
+        .limit(req.query.pagination);
+    } else if(req.query.pagination === "9"){
+        albums = await Album.find({ albumOwner: new ObjectId(req.query.id) })
+        .sort('-albumCreation')
+        .skip((req.query.page - 1) * req.query.pagination)
+        .limit(req.query.pagination);
+    } else {
+        albums = await Album.find({ albumOwner: new ObjectId(req.query.id) });
+    }
     res.send(albums);
 });
 
-router.post("/album/thumbnail", async (req, res) => {
+router.get("/album/thumbnail", async (req, res) => {
     const fs = require("fs");
-    var files = fs.readdirSync(req.body.albumFolder);
+    var files = fs.readdirSync(req.query.albumFolder);
     var chosenFile = files[Math.floor(Math.random() * files.length)];
-    var imagePath = `${req.body.albumFolder}/${chosenFile}`;
+    var imagePath = `${req.query.albumFolder}/${chosenFile}`;
 
     var image = await sharp(imagePath)
         .resize({
-            fit: sharp.fit.contain,
-            width: 800
-        }).sharpen()
+            fit: sharp.fit.fill,
+            width: 800,
+            height: 450 
+        })
+        .toFormat('jpeg')
+        .sharpen()
         .toBuffer();
 
-    res.send(image);
+    res.writeHead(200, {'Content-Type': 'image/jpeg'});
+    res.end(image, 'base64');
 });
 
 module.exports = router;
