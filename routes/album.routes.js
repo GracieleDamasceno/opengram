@@ -33,6 +33,7 @@ router.post("/album/create/", upload.any("photos"), async (req, res) => {
         albumName: json.albumName,
         albumDescription: json.albumDescription,
         albumFolder: albumLocation,
+        albumThumbnail: json.albumThumbnail,
         albumOwner: json.userId,
     });
 

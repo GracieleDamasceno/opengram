@@ -7,6 +7,7 @@ const userSchema = new Schema({
     lastName: String,
     email: String,
     password: String,
+    profilePhoto: String,
     albumNumber: { type: Number, default: 1 },
     photosNumber: { type: Number, default: 0 },
     videosNumber: { type: Number, default: 0 },

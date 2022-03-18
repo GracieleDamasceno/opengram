@@ -6,6 +6,7 @@ const albumSchema = new Schema({
     albumCreation: { type: Date, default: Date.now },
     albumDescription: String,
     albumFolder : String,
+    albumThumbnail: String,
     albumOwner: {
         type: mongoose.Schema.Types.ObjectId, 
         ref: "User"
