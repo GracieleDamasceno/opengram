@@ -80,8 +80,6 @@ router.patch("/profile/update", async(req, res) => {
         req.session.email = updateUser.email;
         req.session.firstName = updateUser.firstName;
         req.session.lastName = updateUser.lastName;
-        req.session.about = updateUser.about;
-
         res.send(req.session);
     }catch(error){
         console.log("[LOG] - Error while updating profile: ", error);
