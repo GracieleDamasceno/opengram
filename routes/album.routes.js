@@ -4,6 +4,7 @@ const multer = require('multer');
 const sharp = require('sharp');
 const fs = require('fs');
 var path = require('path');
+var FormData = require('form-data');
 
 const Album = require("../model/album.model.js");
 const User = require("../model/user.model.js");
@@ -25,7 +26,7 @@ const multerStorage = multer.diskStorage({
 
 const upload = multer({ storage: multerStorage });
 
-router.post("/album/create/", upload.any("photos"), async (req, res) => {
+router.post("/album/create/", upload.single("photos"), async (req, res) => {
     console.log("[LOG] - Request to upload photos: ", req.body.albumInfo);
     const json = JSON.parse(req.body.albumInfo);
 
@@ -33,7 +34,7 @@ router.post("/album/create/", upload.any("photos"), async (req, res) => {
         albumName: json.albumName,
         albumDescription: json.albumDescription,
         albumFolder: albumLocation,
-        albumThumbnail: json.albumThumbnail,
+        albumThumbnail: req.file.filename,
         albumOwner: json.userId,
     });
 
