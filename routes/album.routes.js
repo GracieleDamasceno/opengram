@@ -87,4 +87,5 @@ router.get("/album/:id", async (req, res) => {
     var albums = await Album.findById(req.params.id);
     res.send(albums);
 });
+
 module.exports = router;
