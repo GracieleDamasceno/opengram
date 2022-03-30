@@ -6,9 +6,10 @@ const photosSchema = new Schema({
         type: mongoose.Schema.Types.ObjectId, 
         ref: "Album"
     },
-    photoName: String,
+    photoTitle: String,
+    photoPath: String,
     photoDescription: String,
-    photoUpload: { type: Date, default: Date.now },
+    creationDate: { type: Date, default: Date.now },
 });
 
 module.exports = mongoose.model('Photo', photosSchema);

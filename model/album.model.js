@@ -5,17 +5,16 @@ const albumSchema = new Schema({
     albumName: String,
     albumCreation: { type: Date, default: Date.now },
     albumDescription: String,
-    albumFolder : String,
+    albumFolder: String,
     albumThumbnail: String,
     albumOwner: {
-        type: mongoose.Schema.Types.ObjectId, 
+        type: mongoose.Schema.Types.ObjectId,
         ref: "User"
     },
-    photos:[{
-        path: String,
-        description: String,
-        creationDate: { type: Date, default: Date.now },
-    }]
+    photos: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Photo",
+    }
 });
 
 module.exports = mongoose.model('Album', albumSchema);
