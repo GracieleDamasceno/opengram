@@ -117,8 +117,7 @@ router.get("/album/thumbnail", async (req, res) => {
 // Endpoint used to retrieve photos info of a specific album
 ///
 router.get("/photos", async (req, res) => {
-    console.log("[LOG] - Request to load photos: ", req.query.albumFolder, " ", req.query.id);
-    console.log()
+    //console.log("[LOG] - Request to load photos: ", req.query.albumFolder, " ", req.query.id);
     const photosList = await Photo.find({ album: new ObjectId(req.query.id) });
     res.send(photosList);
 });
@@ -128,7 +127,7 @@ router.get("/photos", async (req, res) => {
 // Endpoint used to retrieve photos file of a specific album
 ///
 router.get("/photos/file", async (req, res) => {
-    console.log("[LOG] - Request to load photos files: ", req.query.path);
+    //console.log("[LOG] - Request to load photos files: ", req.query.path);
     const fs = require("fs");
 
     fs.readFile(req.query.path, function (err, data) {
