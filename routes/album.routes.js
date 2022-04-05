@@ -7,6 +7,7 @@ const Album = require("../model/album.model.js");
 const Photo = require("../model/photo.model.js");
 const User = require("../model/user.model.js");
 var path = require('path');
+const { query } = require("express");
 var ObjectId = require('mongoose').Types.ObjectId;
 
 const multerStorage = multer.diskStorage({
@@ -94,17 +95,19 @@ router.get("/album", async (req, res) => {
 // Endpoint used to retrieve albums thumbnails
 ///
 router.get("/album/thumbnail", async (req, res) => {
-    const fs = require("fs");
-    var files = fs.readdirSync(req.query.albumFolder);
-    var chosenFile = files[Math.floor(Math.random() * files.length)];
-    var imagePath = `${req.query.albumFolder}/${chosenFile}`;
+    var imagePath = "";
 
+    if (req.query.albumThumbnail) {
+        const id = req.query.albumThumbnail;
+        const album = await Album.findOne({ _id: new ObjectId(id) });
+        imagePath = `${album.albumFolder}/${album.albumThumbnail}`;
+    } else if (req.query.photoThumbnail) {
+        const id = req.query.photoThumbnail;
+        const photo = await Photo.findOne({ _id: new ObjectId(id) });
+        imagePath = `${photo.photoPath}`;
+    }
     var image = await sharp(imagePath)
-        .resize({
-            fit: sharp.fit.fill,
-            width: 800,
-            height: 450
-        })
+        .resize(650)
         .toFormat('jpeg')
         .sharpen()
         .toBuffer();
