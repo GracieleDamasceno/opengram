@@ -7,8 +7,9 @@ const Album = require("../model/album.model.js");
 const Photo = require("../model/photo.model.js");
 const User = require("../model/user.model.js");
 var path = require('path');
-const { query } = require("express");
 var ObjectId = require('mongoose').Types.ObjectId;
+var Jimp = require('jimp');
+const thumbnailPercentage = 20;
 
 const multerStorage = multer.diskStorage({
     destination: function (req, file, cb) {
@@ -29,24 +30,33 @@ const upload = multer({ storage: multerStorage });
 router.post("/album/create/", upload.single("photos"), async (req, res) => {
     console.log("[LOG] - Request to create album: ", req.body.albumInfo);
     const json = JSON.parse(req.body.albumInfo);
+    var image = await Jimp.read(`${json.albumLocation}/${req.file.filename}`);
     const newAlbum = new Album({
         albumName: json.albumName,
         albumDescription: json.albumDescription,
         albumFolder: json.albumLocation,
-        albumThumbnail: req.file.filename,
+        albumThumbnail: `${json.albumLocation}/${req.file.filename}`,
+        albumThumbnailWidth: Math.round(image.bitmap.width * thumbnailPercentage / 100),
+        albumThumbnailHeight: Math.round(image.bitmap.height * thumbnailPercentage / 100),
         albumOwner: json.userId,
     });
 
     await newAlbum.save(function (err) {
         if (err) {
+            console.log(err)
             res.status(500).end();
         }
-        const user = User.findByIdAndUpdate({ _id: json.userId }, { $inc: { albumNumber: 1 } }, { new: true });
+    });
 
+    try {
+        const user = await User.findByIdAndUpdate({ _id: new ObjectId(json.userId) }, { $inc: { albumNumber: 1 } }, { new: true });
         req.session.albumNumber = user.albumNumber;
         res.send(req.session);
         res.status(202).end();
-    });
+    } catch (error) {
+        console.log(err)
+        res.status(500).end();
+    }
 });
 
 ///
@@ -58,9 +68,12 @@ router.post("/photos", upload.any("photos"), async (req, res) => {
     const uploadedFiles = req.files;
 
     await Promise.all(uploadedFiles.map(async (file) => {
+        var image = await Jimp.read(`${file.destination}/${file.filename}`);
         const photos = new Photo({
             album: json.id,
-            photoPath: `${file.destination}/${file.filename}`
+            photoPath: `${file.destination}/${file.filename}`,
+            photoThumbnailWidth: Math.round(image.bitmap.width * thumbnailPercentage / 100),
+            photoThumbnailHeight: Math.round(image.bitmap.height * thumbnailPercentage / 100),
         });
         photos.save(function (err) {
             if (err) {
@@ -96,24 +109,51 @@ router.get("/album", async (req, res) => {
 ///
 router.get("/album/thumbnail", async (req, res) => {
     var imagePath = "";
+    var thumbnailWidth;
+    var thumbnailHeight;
+    var image;
 
-    if (req.query.albumThumbnail) {
-        const id = req.query.albumThumbnail;
-        const album = await Album.findOne({ _id: new ObjectId(id) });
-        imagePath = `${album.albumFolder}/${album.albumThumbnail}`;
-    } else if (req.query.photoThumbnail) {
-        const id = req.query.photoThumbnail;
-        const photo = await Photo.findOne({ _id: new ObjectId(id) });
-        imagePath = `${photo.photoPath}`;
+    try {
+        if (req.query.albumThumbnail) {
+            const id = req.query.albumThumbnail;
+            const album = await Album.findOne({ _id: new ObjectId(id) });
+            imagePath = album.albumThumbnail;
+            thumbnailHeight = album.albumThumbnailHeight;
+            thumbnailWidth = album.albumThumbnailWidth;
+
+            var image = await sharp(imagePath)
+            .rotate()
+            .resize({
+                fit: sharp.fit.cover,
+                position: sharp.position.top,
+                width: 800,
+                height: 450
+            })
+            //.resize(thumbnailWidth, thumbnailHeight)
+            .sharpen()
+            .toBuffer()
+
+        } else if (req.query.photoThumbnail) {
+            const id = req.query.photoThumbnail;
+            const photo = await Photo.findOne({ _id: new ObjectId(id) });
+            thumbnailHeight = photo.photoThumbnailHeight;
+            thumbnailWidth = photo.photoThumbnailWidth;
+            imagePath = `${photo.photoPath}`;
+
+            var image = await sharp(imagePath)
+            .rotate()
+            .resize(thumbnailWidth, thumbnailHeight)
+            .sharpen()
+            .toBuffer()
+        }
+
+        res.writeHead(200, { 'Content-Type': 'image/jpeg' });
+        res.end(image, 'base64');
+    } catch (error) {
+        console.log(error);
+        res.status(500).end();
     }
-    var image = await sharp(imagePath)
-        .resize(650)
-        .toFormat('jpeg')
-        .sharpen()
-        .toBuffer();
 
-    res.writeHead(200, { 'Content-Type': 'image/jpeg' });
-    res.end(image, 'base64');
 });
 
 ///

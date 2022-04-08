@@ -9,6 +9,8 @@ const photosSchema = new Schema({
     photoTitle: String,
     photoPath: String,
     photoDescription: String,
+    photoThumbnailWidth: Number,
+    photoThumbnailHeight: Number,
     creationDate: { type: Date, default: Date.now },
 });
 
