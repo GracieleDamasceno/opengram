@@ -122,16 +122,16 @@ router.get("/album/thumbnail", async (req, res) => {
             thumbnailWidth = album.albumThumbnailWidth;
 
             var image = await sharp(imagePath)
-            .rotate()
-            .resize({
-                fit: sharp.fit.cover,
-                position: sharp.position.top,
-                width: 800,
-                height: 450
-            })
-            //.resize(thumbnailWidth, thumbnailHeight)
-            .sharpen()
-            .toBuffer()
+                .rotate()
+                .resize({
+                    fit: sharp.fit.cover,
+                    position: sharp.position.top,
+                    width: 800,
+                    height: 450
+                })
+                //.resize(thumbnailWidth, thumbnailHeight)
+                .sharpen()
+                .toBuffer()
 
         } else if (req.query.photoThumbnail) {
             const id = req.query.photoThumbnail;
@@ -141,10 +141,10 @@ router.get("/album/thumbnail", async (req, res) => {
             imagePath = `${photo.photoPath}`;
 
             var image = await sharp(imagePath)
-            .rotate()
-            .resize(thumbnailWidth, thumbnailHeight)
-            .sharpen()
-            .toBuffer()
+                .rotate()
+                .resize(thumbnailWidth, thumbnailHeight)
+                .sharpen()
+                .toBuffer()
         }
 
         res.writeHead(200, { 'Content-Type': 'image/jpeg' });
@@ -188,6 +188,26 @@ router.get("/photos/file", async (req, res) => {
 router.get("/album/:id", async (req, res) => {
     var albums = await Album.findById(req.params.id);
     res.send(albums);
+});
+
+///
+// Endpoint used to delete album and all of its photos
+///
+router.delete("/album/:id", async (req, res) => {
+    console.log("[LOG] - Request to delete album: ", req.params.id);
+    const album = await Album.findById(req.params.id);
+
+    const fs = require("fs");
+    console.log("Deleting album "+album.albumFolder)
+    fs.rmdir(album.albumFolder, { recursive: true }, (err) => {
+        if (err) {
+            res.status(500).end();
+        }
+        Album.deleteOne(req.params.id);
+        console.log(`${album.albumFolder} is deleted!`);
+        res.status(200).end();
+
+    });
 });
 
 module.exports = router;
