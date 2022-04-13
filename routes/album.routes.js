@@ -9,6 +9,7 @@ const User = require("../model/user.model.js");
 var path = require('path');
 var ObjectId = require('mongoose').Types.ObjectId;
 var Jimp = require('jimp');
+const { rejects } = require("assert");
 const thumbnailPercentage = 20;
 
 const multerStorage = multer.diskStorage({
@@ -196,18 +197,28 @@ router.get("/album/:id", async (req, res) => {
 router.delete("/album/:id", async (req, res) => {
     console.log("[LOG] - Request to delete album: ", req.params.id);
     const album = await Album.findById(req.params.id);
-
     const fs = require("fs");
-    console.log("Deleting album "+album.albumFolder)
-    fs.rmdir(album.albumFolder, { recursive: true }, (err) => {
-        if (err) {
+
+    fs.rmdir(album.albumFolder, { recursive: true }, (errorDeletingFolder) => {
+        if (errorDeletingFolder) {
+            console.log("Error while deleting folder: " + errorDeletingFolder)
             res.status(500).end();
         }
-        Album.deleteOne(req.params.id);
-        console.log(`${album.albumFolder} is deleted!`);
-        res.status(200).end();
-
     });
+
+    const albumPromise = await Album.findByIdAndRemove(album.id);
+    if (albumPromise) {
+        const photoPromise = await Photo.deleteMany({ album: new ObjectId(album.id) })
+        if (!photoPromise) {
+            console.log("Error while deleting album: " + errorDeletingAlbum)
+            res.status(500).end();
+        }
+    } else {
+        console.log("Error while deleting album: " + errorDeletingAlbum)
+        res.status(500).end();
+    }
+    res.status(200).end();
+
 });
 
 module.exports = router;
