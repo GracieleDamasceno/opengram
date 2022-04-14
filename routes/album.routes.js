@@ -221,4 +221,29 @@ router.delete("/album/:id", async (req, res) => {
 
 });
 
+///
+// Endpoint used to delete photos
+///
+router.delete("/photo/", async (req, res) => {
+    console.log("[LOG] - Request to delete photo: ", req.body.photoList);
+    const photoList = JSON.parse(req.body.photosList);
+
+    await Promise.all(photoList.map(async (photo) => {
+        const photoInfo = Photo.findOne(photo.id);
+        fs.unlink(photoInfo.photoPath, (errorDeletingPhoto) => {
+            if (errorDeletingPhoto) {
+                console.log("Error while deleting photo: " + errorDeletingPhoto)
+                res.status(500).end();
+            }
+            const photoPromise = Photo.findByIdAndRemove(photo._id);
+            if (!photoPromise) {
+                console.log("Error while deleting photo")
+                res.status(500).end();
+            }
+        });
+    }));
+    res.status(200).end();
+
+});
+
 module.exports = router;
