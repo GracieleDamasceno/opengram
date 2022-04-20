@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const photoSchema = new Schema({
+    file: String,
     title: String,
     description: String,
     creationDate: { type: Date, default: Date.now },
@@ -16,8 +17,6 @@ const albumSchema = new Schema({
     description: String,
     path: String,
     thumbnail: String,
-    thumbnailWidth: Number,
-    thumbnailHeight: Number,
     owner: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User"
@@ -25,5 +24,5 @@ const albumSchema = new Schema({
     photos: [photoSchema]
 });
 
-module.exports = mongoose.model('Photo', photoSchema);
+module.exports = mongoose.model('Photos', photoSchema);
 module.exports = mongoose.model('Album', albumSchema);
