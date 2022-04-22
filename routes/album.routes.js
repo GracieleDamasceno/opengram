@@ -15,6 +15,7 @@ const thumbnailPercentage = 20;
 ///
 const multerStorage = multer.diskStorage({
     destination: function (req, file, cb) {
+        //TODO: implement albumLocation recovery through user instead of front/album
         var request = JSON.parse(req.body.albumInfo);
         fs.mkdirSync(request.albumLocation, { recursive: true });
         cb(null, request.albumLocation);
@@ -104,26 +105,29 @@ router.post("/photos", upload.any("photos"), async (req, res) => {
 });
 
 ///
-// Endpoint used to retrieve albums based on pagination
+// Endpoint used to retrieve albums info based on pagination
 ///
 router.get("/album", async (req, res) => {
+    //TODO: Adjust pagination
     try {
         var albums;
         if (req.query.pagination === "4") {
             albums = await Album.find({ albumOwner: new ObjectId(req.query.id) })
                 .sort('-albumCreation')
+                .select('name description thumbnail')
                 .limit(req.query.pagination);
         } else if (req.query.pagination === "9") {
             albums = await Album.find({ albumOwner: new ObjectId(req.query.id) })
                 .sort('-albumCreation')
+                .select('name description thumbnail')
                 .skip((req.query.page - 1) * req.query.pagination)
                 .limit(req.query.pagination);
         } else {
-            albums = await Album.find({ albumOwner: new ObjectId(req.query.id) });
+            albums = await Album.find({ albumOwner: new ObjectId(req.query.id) })
+                .select('name description thumbnail');
         }
         res.send(albums);
     } catch (error) {
-        //TODO: Add rollback system in cases that an error occurs
         console.error(error);
         res.status(500).end();
     }
@@ -136,6 +140,11 @@ router.get("/album/thumbnail", async (req, res) => {
     try {
         if (!req.query.photoId) {
             const album = await Album.findOne({ _id: new ObjectId(req.query.albumId) });
+
+            if (!album) {
+                res.status(404).end();
+            }
+
             var imagePath = `${album.path}/${album.thumbnail}`;
 
             var image = await sharp(imagePath)
@@ -178,43 +187,102 @@ router.get("/album/thumbnail", async (req, res) => {
 
 });
 
+
+///
+// Endpoint used to retrieve information of an album
+///
+router.get("/album/:id", async (req, res) => {
+    try {
+        const album = await Album.findById(req.params.id);
+        res.send(album);
+    } catch (error) {
+        console.log(error);
+        res.status(500).end();
+    }
+});
+
+///
+// Endpoint used to retrieve photos file of a specific album
+///
+router.get("/photos/file", async (req, res) => {
+    try {
+        const album = await Album.findById(req.query.albumId);
+
+        if (!album) {
+            res.status(404).end();
+        }
+
+        const photo = album.photos.id(req.query.photoId);
+        const imagePath = `${album.path}/${photo.file}`;
+
+        fs.readFile(imagePath, function (error, data) {
+            if (error) {
+                throw new Error("Error retrieving photo: " + error);
+            }
+            res.writeHead(200, { 'Content-Type': 'image/jpeg' });
+            res.end(data, 'base64');
+        });
+
+
+    } catch (error) {
+        console.log(error);
+        res.status(500).end();
+    }
+});
+
+//TODO: Create files to place those functions
+
+async function deleteFilesPromise(album, photos) {
+    return new Promise((resolve, reject) => {
+        try {
+            photos.map(async (photo) => {
+                const imagePath = `${album.path}/${photo.file}`;
+                fs.unlink(imagePath, err => {
+                    if (err) {
+                        throw err;
+                    }
+                });
+            });
+            resolve("Photos deleted");
+        } catch (error) {
+            console.error(error);
+            reject(error);
+        }
+    });
+}
+
+async function deleteAlbumPromise(album) {
+    return Album.findByIdAndRemove(album.id);
+}
+
+///
+// Endpoint used to delete album and all of its photos
+///
+router.delete("/album/:id", async (req, res) => {
+    console.log("[LOG] - Request to delete album: ", req.params.id);
+    try {
+        const album = await Album.findById(req.params.id);
+
+        if (!album) {
+            res.status(404).end();
+        }
+
+        const photos = album.photos;
+        Promise.all([deleteFilesPromise(album, photos), deleteAlbumPromise(album)])
+            .then(res.status(200).end());
+
+    } catch (error) {
+        console.log(error);
+        res.status(500).end();
+    }
+
+});
+
 /** 
  * MAJOR REFACTORING HAPPENING ABOVE! FUNCTIONS TEMPORARILY COMMENTED
 **/
 
-// ///
-// // Endpoint used to retrieve photos info of a specific album
-// ///
-// router.get("/photos", async (req, res) => {
-//     //console.log("[LOG] - Request to load photos: ", req.query.albumFolder, " ", req.query.id);
-//     const photosList = await Photo.find({ album: new ObjectId(req.query.id) });
-//     res.send(photosList);
-// });
 
-
-// ///
-// // Endpoint used to retrieve photos file of a specific album
-// ///
-// router.get("/photos/file", async (req, res) => {
-//     //console.log("[LOG] - Request to load photos files: ", req.query.path);
-//     const fs = require("fs");
-
-//     fs.readFile(req.query.path, function (err, data) {
-//         if (err) {
-//             res.status(500).end();
-//         }
-//         res.writeHead(200, { 'Content-Type': 'image/jpeg' });
-//         res.end(data, 'base64');
-//     });
-// });
-
-// ///
-// // Endpoint used to retrieve information of an album
-// ///
-// router.get("/album/:id", async (req, res) => {
-//     var albums = await Album.findById(req.params.id);
-//     res.send(albums);
-// });
 
 // ///
 // // Endpoint used to delete album and all of its photos
