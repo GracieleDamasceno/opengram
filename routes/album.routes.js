@@ -33,7 +33,7 @@ router.post("/album/create/", upload.single("photos"), async (req, res) => {
     console.log("[LOG] - Request to create album: ", req.body.albumInfo);
     try {
         const request = JSON.parse(req.body.albumInfo);
-        const image = await Jimp.read(`${request.albumLocation}/${req.file.filename}`);
+        const image = await Jimp.read(`${req.file.destination}/${req.file.filename}`);
 
         const albumThumbnail = {
             file: req.file.filename,
@@ -44,7 +44,7 @@ router.post("/album/create/", upload.single("photos"), async (req, res) => {
         const album = new Album({
             name: request.albumName,
             description: request.albumDescription,
-            path: request.albumLocation,
+            path: req.file.destination,
             owner: request.userId,
             thumbnail: req.file.filename,
             photos: [albumThumbnail]
@@ -55,7 +55,7 @@ router.post("/album/create/", upload.single("photos"), async (req, res) => {
                 throw new Error("Error saving album " + request.albumName + ": " + error)
             }
         });
-        
+
         const user = await User.findByIdAndUpdate({ _id: new ObjectId(request.userId) }, { $inc: { albumNumber: 1 } }, { new: true });
         req.session.albumNumber = user.albumNumber;
         res.send(req.session);
@@ -68,107 +68,119 @@ router.post("/album/create/", upload.single("photos"), async (req, res) => {
 });
 
 
+///
+// Endpoint used to upload photos into a specific album
+///
+router.post("/photos", upload.any("photos"), async (req, res) => {
+    console.log("[LOG] - Request to upload photos: ", req.body.albumInfo);
+    try {
+        const request = JSON.parse(req.body.albumInfo);
+        const photosToUpload = req.files;
+
+        await Promise.all(photosToUpload.map(async (file) => {
+            var image = await Jimp.read(`${file.destination}/${file.filename}`);
+
+            var photo = {
+                file: file.filename,
+                thumbnailWidth: Math.round(image.bitmap.width * thumbnailPercentage / 100),
+                thumbnailHeight: Math.round(image.bitmap.height * thumbnailPercentage / 100)
+            };
+
+            var album = await Album.findById(request.id);
+            album.photos.push(photo);
+            album.save(function (error) {
+                if (error) {
+                    throw new Error("Error uploading photo into album " + request.albumName + ": " + error)
+                }
+            });
+        }));
+
+        res.status(202).end();
+    } catch (error) {
+        //TODO: Add rollback system in cases that an error occurs
+        console.error(error);
+        res.status(500).end();
+    }
+});
+
+///
+// Endpoint used to retrieve albums based on pagination
+///
+router.get("/album", async (req, res) => {
+    try {
+        var albums;
+        if (req.query.pagination === "4") {
+            albums = await Album.find({ albumOwner: new ObjectId(req.query.id) })
+                .sort('-albumCreation')
+                .limit(req.query.pagination);
+        } else if (req.query.pagination === "9") {
+            albums = await Album.find({ albumOwner: new ObjectId(req.query.id) })
+                .sort('-albumCreation')
+                .skip((req.query.page - 1) * req.query.pagination)
+                .limit(req.query.pagination);
+        } else {
+            albums = await Album.find({ albumOwner: new ObjectId(req.query.id) });
+        }
+        res.send(albums);
+    } catch (error) {
+        //TODO: Add rollback system in cases that an error occurs
+        console.error(error);
+        res.status(500).end();
+    }
+});
+
+///
+// Endpoint used to retrieve albums thumbnails
+///
+router.get("/album/thumbnail", async (req, res) => {
+    try {
+        if (!req.query.photoId) {
+            const album = await Album.findOne({ _id: new ObjectId(req.query.albumId) });
+            var imagePath = `${album.path}/${album.thumbnail}`;
+
+            var image = await sharp(imagePath)
+                .rotate()
+                .resize({
+                    fit: sharp.fit.cover,
+                    position: sharp.position.top,
+                    width: 800,
+                    height: 450
+                })
+                //.resize(thumbnailWidth, thumbnailHeight)
+                .sharpen()
+                .toBuffer();
+
+            res.writeHead(200, { 'Content-Type': 'image/jpeg' });
+            res.end(image, 'base64');
+
+        } else if (req.query.photoId && req.query.albumId) {
+            const album = await Album.findOne({ _id: new ObjectId(req.query.albumId) });
+            const photo = album.photos.id(req.query.photoId);
+
+            const thumbnailHeight = photo.thumbnailHeight;
+            const thumbnailWidth = photo.thumbnailWidth;
+            var imagePath = `${album.path}/${photo.file}`;
+
+            var image = await sharp(imagePath)
+                .rotate()
+                .resize(thumbnailWidth, thumbnailHeight)
+                .sharpen()
+                .toBuffer();
+
+            res.writeHead(200, { 'Content-Type': 'image/jpeg' });
+            res.end(image, 'base64');
+        }
+
+    } catch (error) {
+        console.log(error);
+        res.status(500).end();
+    }
+
+});
+
 /** 
  * MAJOR REFACTORING HAPPENING ABOVE! FUNCTIONS TEMPORARILY COMMENTED
 **/
-
-
-// ///
-// // Endpoint used to upload photos into a specific album
-// ///
-// router.post("/photos", upload.any("photos"), async (req, res) => {
-//     console.log("[LOG] - Request to upload photos: ", req.body.albumInfo);
-//     const json = JSON.parse(req.body.albumInfo);
-//     const uploadedFiles = req.files;
-
-//     await Promise.all(uploadedFiles.map(async (file) => {
-//         var image = await Jimp.read(`${file.destination}/${file.filename}`);
-//         const photos = new Photo({
-//             album: json.id,
-//             photoPath: `${file.destination}/${file.filename}`,
-//             photoThumbnailWidth: Math.round(image.bitmap.width * thumbnailPercentage / 100),
-//             photoThumbnailHeight: Math.round(image.bitmap.height * thumbnailPercentage / 100),
-//         });
-//         photos.save(function (err) {
-//             if (err) {
-//                 res.status(500).end();
-//             }
-//             res.status(202).end();
-//         });
-//     }));
-// });
-
-// ///
-// // Endpoint used to retrieve albums based on pagination
-// ///
-// router.get("/album", async (req, res) => {
-//     var albums;
-//     if (req.query.pagination === "4") {
-//         albums = await Album.find({ albumOwner: new ObjectId(req.query.id) })
-//             .sort('-albumCreation')
-//             .limit(req.query.pagination);
-//     } else if (req.query.pagination === "9") {
-//         albums = await Album.find({ albumOwner: new ObjectId(req.query.id) })
-//             .sort('-albumCreation')
-//             .skip((req.query.page - 1) * req.query.pagination)
-//             .limit(req.query.pagination);
-//     } else {
-//         albums = await Album.find({ albumOwner: new ObjectId(req.query.id) });
-//     }
-//     res.send(albums);
-// });
-
-// ///
-// // Endpoint used to retrieve albums thumbnails
-// ///
-// router.get("/album/thumbnail", async (req, res) => {
-//     var imagePath = "";
-//     var thumbnailWidth;
-//     var thumbnailHeight;
-//     var image;
-
-//     try {
-//         if (req.query.albumThumbnail) {
-//             const id = req.query.albumThumbnail;
-//             const album = await Album.findOne({ _id: new ObjectId(id) });
-//             imagePath = album.albumThumbnail;
-//             thumbnailHeight = album.albumThumbnailHeight;
-//             thumbnailWidth = album.albumThumbnailWidth;
-
-//             var image = await sharp(imagePath)
-//                 .rotate()
-//                 .resize({
-//                     fit: sharp.fit.cover,
-//                     position: sharp.position.top,
-//                     width: 800,
-//                     height: 450
-//                 })
-//                 //.resize(thumbnailWidth, thumbnailHeight)
-//                 .sharpen()
-//                 .toBuffer()
-
-//         } else if (req.query.photoThumbnail) {
-//             const id = req.query.photoThumbnail;
-//             const photo = await Photo.findOne({ _id: new ObjectId(id) });
-//             thumbnailHeight = photo.photoThumbnailHeight;
-//             thumbnailWidth = photo.photoThumbnailWidth;
-//             imagePath = `${photo.photoPath}`;
-
-//             var image = await sharp(imagePath)
-//                 .rotate()
-//                 .resize(thumbnailWidth, thumbnailHeight)
-//                 .sharpen()
-//                 .toBuffer()
-//         }
-
-//         res.writeHead(200, { 'Content-Type': 'image/jpeg' });
-//         res.end(image, 'base64');
-//     } catch (error) {
-//         console.log(error);
-//         res.status(500).end();
-//     }
-
-// });
 
 // ///
 // // Endpoint used to retrieve photos info of a specific album
