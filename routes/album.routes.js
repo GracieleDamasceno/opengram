@@ -5,9 +5,9 @@ const sharp = require('sharp');
 const fs = require('fs');
 const Album = require("../model/album.model.js");
 const User = require("../model/user.model.js");
-var path = require('path');
-var ObjectId = require('mongoose').Types.ObjectId;
-var Jimp = require('jimp');
+const path = require('path');
+const ObjectId = require('mongoose').Types.ObjectId;
+const Jimp = require('jimp');
 const thumbnailPercentage = 20;
 
 ///
@@ -72,7 +72,7 @@ router.post("/album/create/", upload.single("photos"), async (req, res) => {
 ///
 // Endpoint used to upload photos into a specific album
 ///
-router.post("/photos", upload.any("photos"), async (req, res) => {
+router.post("/photo", upload.any("photos"), async (req, res) => {
     console.log("[LOG] - Request to upload photos: ", req.body.albumInfo);
     try {
         const request = JSON.parse(req.body.albumInfo);
@@ -187,7 +187,6 @@ router.get("/album/thumbnail", async (req, res) => {
 
 });
 
-
 ///
 // Endpoint used to retrieve information of an album
 ///
@@ -204,7 +203,7 @@ router.get("/album/:id", async (req, res) => {
 ///
 // Endpoint used to retrieve photos file of a specific album
 ///
-router.get("/photos/file", async (req, res) => {
+router.get("/photo/file", async (req, res) => {
     try {
         const album = await Album.findById(req.query.albumId);
 
@@ -232,11 +231,32 @@ router.get("/photos/file", async (req, res) => {
 
 //TODO: Create files to place those functions
 
+async function deleteAllFilesPromise(album) {
+    return new Promise((resolve, reject) => {
+        try {
+            const photos = album.photos;
+            photos.map(async (photo) => {
+                const imagePath = `${album.path}/${photo.file}`;
+                fs.unlink(imagePath, err => {
+                    if (err) {
+                        throw err;
+                    }
+                });
+            });
+            resolve("Photos deleted");
+        } catch (error) {
+            console.error(error);
+            reject(error);
+        }
+    });
+}
+
 async function deleteFilesPromise(album, photos) {
     return new Promise((resolve, reject) => {
         try {
             photos.map(async (photo) => {
-                const imagePath = `${album.path}/${photo.file}`;
+                const photoInfo = album.photos.id(photo.id);
+                const imagePath = `${album.path}/${photoInfo.file}`;
                 fs.unlink(imagePath, err => {
                     if (err) {
                         throw err;
@@ -255,6 +275,25 @@ async function deleteAlbumPromise(album) {
     return Album.findByIdAndRemove(album.id);
 }
 
+async function deletePhotosPromise(album, photos) {
+    return new Promise((resolve, reject) => {
+        try {
+            photos.map(async (photo) => {
+                album.photos.pull(photo.id);
+            });
+            album.save(function (error) {
+                if (error) {
+                    throw new Error("Error deleting photos from album " + album._id + ": " + error)
+                }
+            });
+            resolve("Photos deleted");
+        } catch (error) {
+            console.error(error);
+            reject(error);
+        }
+    });
+}
+
 ///
 // Endpoint used to delete album and all of its photos
 ///
@@ -267,8 +306,7 @@ router.delete("/album/:id", async (req, res) => {
             res.status(404).end();
         }
 
-        const photos = album.photos;
-        Promise.all([deleteFilesPromise(album, photos), deleteAlbumPromise(album)])
+        Promise.all([deleteAllFilesPromise(album), deleteAlbumPromise(album)])
             .then(res.status(200).end());
 
     } catch (error) {
@@ -278,65 +316,28 @@ router.delete("/album/:id", async (req, res) => {
 
 });
 
-/** 
- * MAJOR REFACTORING HAPPENING ABOVE! FUNCTIONS TEMPORARILY COMMENTED
-**/
+///
+// Endpoint used to delete photos
+///
+router.delete("/photo/:id", async (req, res) => {
+    console.log("[LOG] - Request to delete photos: ", req.body.photos);
+    try {
+        const album = await Album.findById(req.params.id);
 
+        if (!album) {
+            res.status(404).end();
+        }
 
+        const photos = req.body.photos;
 
-// ///
-// // Endpoint used to delete album and all of its photos
-// ///
-// router.delete("/album/:id", async (req, res) => {
-//     console.log("[LOG] - Request to delete album: ", req.params.id);
-//     const album = await Album.findById(req.params.id);
-//     const fs = require("fs");
+        Promise.all([deleteFilesPromise(album, photos), deletePhotosPromise(album, photos)])
+            .then(res.status(200).end());
 
-//     fs.rmdir(album.albumFolder, { recursive: true }, (errorDeletingFolder) => {
-//         if (errorDeletingFolder) {
-//             console.log("Error while deleting folder: " + errorDeletingFolder)
-//             res.status(500).end();
-//         }
-//     });
+    } catch (error) {
+        console.log(error);
+        res.status(500).end();
+    }
 
-//     const albumPromise = await Album.findByIdAndRemove(album.id);
-//     if (albumPromise) {
-//         const photoPromise = await Photo.deleteMany({ album: new ObjectId(album.id) })
-//         if (!photoPromise) {
-//             console.log("Error while deleting album: " + errorDeletingAlbum)
-//             res.status(500).end();
-//         }
-//     } else {
-//         console.log("Error while deleting album: " + errorDeletingAlbum)
-//         res.status(500).end();
-//     }
-//     res.status(200).end();
-
-// });
-
-// ///
-// // Endpoint used to delete photos
-// ///
-// router.delete("/photo/", async (req, res) => {
-//     console.log("[LOG] - Request to delete photo: ", req.body.photoList);
-//     const photoList = JSON.parse(req.body.photosList);
-
-//     await Promise.all(photoList.map(async (photo) => {
-//         const photoInfo = Photo.findOne(photo.id);
-//         fs.unlink(photoInfo.photoPath, (errorDeletingPhoto) => {
-//             if (errorDeletingPhoto) {
-//                 console.log("Error while deleting photo: " + errorDeletingPhoto)
-//                 res.status(500).end();
-//             }
-//             const photoPromise = Photo.findByIdAndRemove(photo._id);
-//             if (!photoPromise) {
-//                 console.log("Error while deleting photo")
-//                 res.status(500).end();
-//             }
-//         });
-//     }));
-//     res.status(200).end();
-
-// });
+});
 
 module.exports = router;
