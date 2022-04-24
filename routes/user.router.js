@@ -54,7 +54,6 @@ router.post("/account/sign-in", async (req, res) => {
         if (user) {
             const comparison = await bcrypt.compare(req.body.password, user.password);
             if (comparison) {
-                console.log(user)
                 req.session.userId = user._id.toString();
                 req.session.username = user.username;
                 req.session.email = user.email;

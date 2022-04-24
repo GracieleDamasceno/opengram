@@ -46,7 +46,7 @@ router.post("/album/create/", upload.single("photos"), async (req, res) => {
             name: request.albumName,
             description: request.albumDescription,
             path: req.file.destination,
-            owner: request.userId,
+            owner: request.user,
             thumbnail: req.file.filename,
             photos: [albumThumbnail]
         });
@@ -57,7 +57,7 @@ router.post("/album/create/", upload.single("photos"), async (req, res) => {
             }
         });
 
-        const user = await User.findByIdAndUpdate({ _id: new ObjectId(request.userId) }, { $inc: { albumNumber: 1 } }, { new: true });
+        const user = await User.findByIdAndUpdate({ _id: new ObjectId(request.user) }, { $inc: { albumNumber: 1 } }, { new: true });
         req.session.albumNumber = user.albumNumber;
         res.send(req.session);
         res.status(202).end();
@@ -73,7 +73,7 @@ router.post("/album/create/", upload.single("photos"), async (req, res) => {
 // Endpoint used to upload photos into a specific album
 ///
 router.post("/photo", upload.any("photos"), async (req, res) => {
-    console.log("[LOG] - Request to upload photos: ", req.body.albumInfo);
+    console.log("[LOG] - Request to upload photos: ", req.body.albumInfo.id);
     try {
         const request = JSON.parse(req.body.albumInfo);
         const photosToUpload = req.files;
@@ -107,23 +107,23 @@ router.post("/photo", upload.any("photos"), async (req, res) => {
 ///
 // Endpoint used to retrieve albums info based on pagination
 ///
-router.get("/album", async (req, res) => {
+router.get("/album/user/:id", async (req, res) => {
     //TODO: Adjust pagination
     try {
         var albums;
         if (req.query.pagination === "4") {
-            albums = await Album.find({ albumOwner: new ObjectId(req.query.id) })
+            albums = await Album.find({ albumOwner: new ObjectId(req.path.id) })
                 .sort('-albumCreation')
                 .select('name description thumbnail')
                 .limit(req.query.pagination);
         } else if (req.query.pagination === "9") {
-            albums = await Album.find({ albumOwner: new ObjectId(req.query.id) })
+            albums = await Album.find({ albumOwner: new ObjectId(req.path.id) })
                 .sort('-albumCreation')
                 .select('name description thumbnail')
                 .skip((req.query.page - 1) * req.query.pagination)
                 .limit(req.query.pagination);
         } else {
-            albums = await Album.find({ albumOwner: new ObjectId(req.query.id) })
+            albums = await Album.find({ albumOwner: new ObjectId(req.path.id) })
                 .select('name description thumbnail');
         }
         res.send(albums);
@@ -138,11 +138,12 @@ router.get("/album", async (req, res) => {
 ///
 router.get("/album/thumbnail", async (req, res) => {
     try {
-        if (!req.query.photoId) {
-            const album = await Album.findOne({ _id: new ObjectId(req.query.albumId) });
+        if (!req.query.photo) {
+            const album = await Album.findOne({ _id: new ObjectId(req.query.album) });
 
             if (!album) {
                 res.status(404).end();
+                return;
             }
 
             var imagePath = `${album.path}/${album.thumbnail}`;
@@ -162,9 +163,15 @@ router.get("/album/thumbnail", async (req, res) => {
             res.writeHead(200, { 'Content-Type': 'image/jpeg' });
             res.end(image, 'base64');
 
-        } else if (req.query.photoId && req.query.albumId) {
-            const album = await Album.findOne({ _id: new ObjectId(req.query.albumId) });
-            const photo = album.photos.id(req.query.photoId);
+        } else if (req.query.photo && req.query.album) {
+            const album = await Album.findOne({ _id: new ObjectId(req.query.album) });
+
+            if (!album) {
+                res.status(404).end();
+                return;
+            }
+
+            const photo = album.photos.id(req.query.photo);
 
             const thumbnailHeight = photo.thumbnailHeight;
             const thumbnailWidth = photo.thumbnailWidth;
@@ -205,18 +212,19 @@ router.get("/album/:id", async (req, res) => {
 ///
 router.get("/photo/file", async (req, res) => {
     try {
-        const album = await Album.findById(req.query.albumId);
+        const album = await Album.findById(req.query.album);
 
         if (!album) {
             res.status(404).end();
+            return;
         }
 
-        const photo = album.photos.id(req.query.photoId);
+        const photo = album.photos.id(req.query.photo);
         const imagePath = `${album.path}/${photo.file}`;
 
         fs.readFile(imagePath, function (error, data) {
             if (error) {
-                throw new Error("Error retrieving photo: " + error);
+                throw new Error("Error retrieving photo "+ req.query.photo+ ": " + error);
             }
             res.writeHead(200, { 'Content-Type': 'image/jpeg' });
             res.end(data, 'base64');
@@ -304,6 +312,7 @@ router.delete("/album/:id", async (req, res) => {
 
         if (!album) {
             res.status(404).end();
+            return;
         }
 
         Promise.all([deleteAllFilesPromise(album), deleteAlbumPromise(album)])
@@ -319,13 +328,14 @@ router.delete("/album/:id", async (req, res) => {
 ///
 // Endpoint used to delete photos
 ///
-router.delete("/photo/:id", async (req, res) => {
+router.delete("/photo/album/:id", async (req, res) => {
     console.log("[LOG] - Request to delete photos: ", req.body.photos);
     try {
         const album = await Album.findById(req.params.id);
 
         if (!album) {
             res.status(404).end();
+            return;
         }
 
         const photos = req.body.photos;
@@ -338,6 +348,66 @@ router.delete("/photo/:id", async (req, res) => {
         res.status(500).end();
     }
 
+});
+
+///
+// Endpoint used to edit photo's information
+///
+router.patch("/photo/album/:id", async (req, res) => {
+    console.log("[LOG] - Request to update photo info of album: ", req.params.id);
+    try {
+        const album = await Album.findById(req.params.id);
+
+        if (!album) {
+            res.status(404).end();
+            return;
+        }
+
+        const photo = album.photos.id(req.query.photo);
+        photo.title = req.body.title;
+        photo.description = req.body.description;
+
+        album.photos.push(photo);
+        album.save(function (error) {
+            if (error) {
+                throw new Error("Error updating information of photo " + req.query.photo + ": " + error)
+            }
+        });
+
+        res.status(202).end();
+    } catch (error) {
+        console.log(error);
+        res.status(500).end();
+    }
+});
+
+///
+// Endpoint used to edit album's information
+///
+router.patch("/album/:id", async (req, res) => {
+    console.log("[LOG] - Request to update photo info of album: ", req.params.id);
+    try {
+        const album = await Album.findById(req.params.id);
+
+        if (!album) {
+            res.status(404).end();
+            return;
+        }
+
+        album.name = req.body.name;
+        album.description = req.body.description;
+
+        album.save(function (error) {
+            if (error) {
+                throw new Error("Error updating information of album " + req.params.id + ": " + error)
+            }
+        });
+
+        res.status(202).end();
+    } catch (error) {
+        console.log(error);
+        res.status(500).end();
+    }
 });
 
 module.exports = router;
