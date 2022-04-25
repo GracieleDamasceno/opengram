@@ -10,15 +10,21 @@ const ObjectId = require('mongoose').Types.ObjectId;
 const Jimp = require('jimp');
 const thumbnailPercentage = 20;
 
+//TODO: Improve exception and errors handling
+async function getAlbumLocation(userId) {
+    return await User.findById(userId).then(user => user.albumPath);
+}
 ///
 // Multer configurations
 ///
 const multerStorage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        //TODO: implement albumLocation recovery through user instead of front/album
-        var request = JSON.parse(req.body.albumInfo);
-        fs.mkdirSync(request.albumLocation, { recursive: true });
-        cb(null, request.albumLocation);
+    destination: async function (req, file, cb) {
+        console.log(req.body)
+        const request = JSON.parse(req.body.albumInfo);
+        const albumLocation = await getAlbumLocation(request.user);
+        console.log(albumLocation)
+        fs.mkdirSync(albumLocation, { recursive: true });
+        cb(null, albumLocation);
     },
     filename: function (req, file, cb) {
         cb(null, `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`);
@@ -73,7 +79,7 @@ router.post("/album/create/", upload.single("photos"), async (req, res) => {
 // Endpoint used to upload photos into a specific album
 ///
 router.post("/photo", upload.any("photos"), async (req, res) => {
-    console.log("[LOG] - Request to upload photos: ", req.body.albumInfo.id);
+    console.log("[LOG] - Request to upload photos: ", req.body.albumInfo);
     try {
         const request = JSON.parse(req.body.albumInfo);
         const photosToUpload = req.files;

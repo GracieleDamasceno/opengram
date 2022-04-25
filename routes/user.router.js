@@ -3,12 +3,12 @@ const router = express.Router();
 const bcrypt = require("bcryptjs");
 const fs = require("fs");
 const path = require("path");
-
 const User = require("../model/user.model.js");
 
 router.post("/account/join", async (req, res) => {
     console.log("[LOG] - Request to create a new user: ", req.body)
     try {
+        //TODO: Remove e-mail address and promote login by username
         const userEmail = await User.findOne({ email: req.body.email });
         const userUsername = await User.findOne({ username: req.body.username });
         if (!userEmail && !userUsername) {
@@ -59,9 +59,8 @@ router.post("/account/sign-in", async (req, res) => {
                 req.session.email = user.email;
                 req.session.firstName = user.firstName;
                 req.session.lastName = user.lastName;
-                req.session.albumNumber = user.albumNumber;
-                req.session.albumPath = user.albumPath;
-                req.session.photoNumber = user.photoNumber;
+                req.session.albumsNumber = user.albumsNumber;
+                req.session.photosNumber = user.photosNumber;
                 req.session.videosNumber = user.videosNumber;
                 res.send(req.session);
             } else {
@@ -79,11 +78,7 @@ router.post("/account/sign-in", async (req, res) => {
     }
 });
 
-router.post("/account/logout", async (req, res) => {
-    req.session.destroy();
-    res.redirect("/");
-});
-
+//TODO: add possibility of change password
 router.patch("/profile/update", async (req, res) => {
     try {
         console.log("[LOG] - Updating profile of: ", req.body.email)
