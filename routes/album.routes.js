@@ -19,10 +19,8 @@ async function getAlbumLocation(userId) {
 ///
 const multerStorage = multer.diskStorage({
     destination: async function (req, file, cb) {
-        console.log(req.body)
         const request = JSON.parse(req.body.albumInfo);
         const albumLocation = await getAlbumLocation(request.user);
-        console.log(albumLocation)
         fs.mkdirSync(albumLocation, { recursive: true });
         cb(null, albumLocation);
     },
@@ -63,7 +61,7 @@ router.post("/album/create/", upload.single("photos"), async (req, res) => {
             }
         });
 
-        const user = await User.findByIdAndUpdate({ _id: new ObjectId(request.user) }, { $inc: { albumNumber: 1 } }, { new: true });
+        const user = await User.findByIdAndUpdate({ _id: new ObjectId(request.user) }, { $inc: { albumsNumber: 1 } }, { new: true });
         req.session.albumNumber = user.albumNumber;
         res.send(req.session);
         res.status(202).end();
@@ -101,13 +99,47 @@ router.post("/photo", upload.any("photos"), async (req, res) => {
                 }
             });
         }));
-
+        await User.findByIdAndUpdate({ _id: new ObjectId(request.user) }, { $inc: { photosNumber: 1 } }, { new: true });
         res.status(202).end();
     } catch (error) {
         //TODO: Add rollback system in cases that an error occurs
         console.error(error);
         res.status(500).end();
     }
+});
+
+///
+// Endpoint used to upload profile photos and cover photos
+///
+router.post("/photos/profile", upload.single("photos"), async (req, res) => {
+    console.log("[LOG] - Request to upload profile photos: ", req.body);
+    const request = JSON.parse(req.body.albumInfo);
+    const photoToUpload = req.file;
+    var user = await User.findById(request.user);
+    user.profilePhoto = photoToUpload.filename;
+    user.save(function (error) {
+        if (error) {
+            throw new Error("Error updating profile photo" + error)
+        }
+    });
+    res.status(202).end();
+});
+
+///
+// Endpoint used to upload cover photos and cover photos
+///
+router.post("/photos/cover", upload.single("photos"), async (req, res) => {
+    console.log("[LOG] - Request to upload cover photos: ", req.body);
+    const request = JSON.parse(req.body.albumInfo);
+    const photoToUpload = req.file;
+    var user = await User.findById(request.user);
+    user.coverPhoto = photoToUpload.filename;
+    user.save(function (error) {
+        if (error) {
+            throw new Error("Error updating cover photo" + error)
+        }
+    });
+    res.status(202).end();
 });
 
 ///
