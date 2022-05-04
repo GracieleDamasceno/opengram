@@ -46,7 +46,6 @@ router.post("/account/sign-in", async (req, res) => {
     console.log("[LOG] - Request to log-in user: ", req.body.username)
     try {
         const user = await User.findOne({ username: req.body.username });
-        console.log(user)
         if (user) {
             const comparison = await bcrypt.compare(req.body.password, user.password);
             if (comparison) {
@@ -78,7 +77,6 @@ router.post("/account/sign-in", async (req, res) => {
 router.patch("/profile/update", async (req, res) => {
     try {
         console.log("[LOG] - Updating profile of: ", req.body.username)
-        console.log(req.body)
 
         const updateUser = await User.findByIdAndUpdate(req.body.id, { $set: req.body }, { new: true });
         

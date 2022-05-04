@@ -142,6 +142,87 @@ router.post("/photos/cover", upload.single("photos"), async (req, res) => {
     res.status(202).end();
 });
 
+
+///
+// Endpoint used to retrieve cover photo
+///
+router.get("/photos/cover", async (req, res) => {
+    try {
+        const user = await User.findById(req.query.user);
+        if (!user) {
+            res.status(404).end();
+            return;
+        }
+
+        const imagePath = `${user.albumPath}/${user.coverPhoto}`;
+
+        fs.readFile(imagePath, async function (error, data) {
+            if (error) {
+                throw new Error("Error retrieving cover photo from user" + req.query.user + ": " + error);
+            }
+
+            var image = await sharp(data)
+            .rotate()
+            .resize({
+                fit: sharp.fit.cover,
+                width: 800,
+                height: 600
+            })
+            .sharpen()
+            .toBuffer();
+
+            res.writeHead(200, { 'Content-Type': 'image/jpeg' });
+            res.end(image, 'base64');
+        });
+
+    } catch (error) {
+        console.log(error);
+        res.status(500).end();
+    }
+
+});
+
+
+///
+// Endpoint used to retrieve profile photo
+///
+router.get("/photos/profile", async (req, res) => {
+    try {
+        const user = await User.findById(req.query.user);
+        if (!user) {
+            res.status(404).end();
+            return;
+        }
+
+        const imagePath = `${user.albumPath}/${user.profilePhoto}`;
+
+        fs.readFile(imagePath, async function (error, data) {
+            if (error) {
+                throw new Error("Error retrieving profile photo from user" + req.query.user + ": " + error);
+            }
+
+            var image = await sharp(data)
+            .rotate()
+            .resize({
+                fit: sharp.fit.cover,
+                position: sharp.position.center,
+                width: 500,
+                height: 500
+            })
+            .sharpen()
+            .toBuffer();
+
+            res.writeHead(200, { 'Content-Type': 'image/jpeg' });
+            res.end(image, 'base64');
+        });
+
+    } catch (error) {
+        console.log(error);
+        res.status(500).end();
+    }
+
+});
+
 ///
 // Endpoint used to retrieve albums info based on pagination
 ///
@@ -262,7 +343,7 @@ router.get("/photo/file", async (req, res) => {
 
         fs.readFile(imagePath, function (error, data) {
             if (error) {
-                throw new Error("Error retrieving photo "+ req.query.photo+ ": " + error);
+                throw new Error("Error retrieving photo " + req.query.photo + ": " + error);
             }
             res.writeHead(200, { 'Content-Type': 'image/jpeg' });
             res.end(data, 'base64');
