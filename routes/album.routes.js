@@ -20,6 +20,9 @@ async function getAlbumLocation(userId) {
 const multerStorage = multer.diskStorage({
     destination: async function (req, file, cb) {
         const request = JSON.parse(req.body.albumInfo);
+        if(!request.user){
+            throw new Error("Error while uploading photo: user undefined")
+        }
         const albumLocation = await getAlbumLocation(request.user);
         fs.mkdirSync(albumLocation, { recursive: true });
         cb(null, albumLocation);
@@ -364,11 +367,7 @@ async function deleteAllFilesPromise(album) {
             const photos = album.photos;
             photos.map(async (photo) => {
                 const imagePath = `${album.path}/${photo.file}`;
-                fs.unlink(imagePath, err => {
-                    if (err) {
-                        throw err;
-                    }
-                });
+                fs.unlinkSync(imagePath);
             });
             resolve("Photos deleted");
         } catch (error) {
@@ -384,11 +383,7 @@ async function deleteFilesPromise(album, photos) {
             photos.map(async (photo) => {
                 const photoInfo = album.photos.id(photo.id);
                 const imagePath = `${album.path}/${photoInfo.file}`;
-                fs.unlink(imagePath, err => {
-                    if (err) {
-                        throw err;
-                    }
-                });
+                fs.unlinkSync(imagePath);
             });
             resolve("Photos deleted");
         } catch (error) {
