@@ -37,7 +37,7 @@ const upload = multer({ storage: multerStorage });
 ///
 // Endpoint used to create an album and upload its thumbnail
 ///
-router.post("/album/create/", upload.single("photos"), async (req, res) => {
+router.post("/album/create/", upload.single("photo"), async (req, res) => {
     console.log("[LOG] - Request to create album: ", req.body.albumInfo);
     try {
         const request = JSON.parse(req.body.albumInfo);
@@ -233,20 +233,17 @@ router.get("/album/user/:id", async (req, res) => {
     //TODO: Adjust pagination
     try {
         var albums;
-        if (req.query.pagination === "4") {
+        if (req.query.limit === "4") {
             albums = await Album.find({ albumOwner: new ObjectId(req.path.id) })
-                .sort('-albumCreation')
+                .sort('-creationDate')
                 .select('name description thumbnail')
-                .limit(req.query.pagination);
-        } else if (req.query.pagination === "9") {
-            albums = await Album.find({ albumOwner: new ObjectId(req.path.id) })
-                .sort('-albumCreation')
-                .select('name description thumbnail')
-                .skip((req.query.page - 1) * req.query.pagination)
-                .limit(req.query.pagination);
+                .limit(req.query.limit);
         } else {
             albums = await Album.find({ albumOwner: new ObjectId(req.path.id) })
-                .select('name description thumbnail');
+                .sort('-creationDate')
+                .select('name description thumbnail')
+                .skip((req.query.skip - 1) * req.query.limit)
+                .limit(req.query.limit);
         }
         res.send(albums);
     } catch (error) {
