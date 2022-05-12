@@ -20,7 +20,7 @@ async function getAlbumLocation(userId) {
 const multerStorage = multer.diskStorage({
     destination: async function (req, file, cb) {
         const request = JSON.parse(req.body.albumInfo);
-        if(!request.user){
+        if (!request.user) {
             throw new Error("Error while uploading photo: user undefined")
         }
         const albumLocation = await getAlbumLocation(request.user);
@@ -165,14 +165,14 @@ router.get("/photos/cover", async (req, res) => {
             }
 
             var image = await sharp(data)
-            .rotate()
-            .resize({
-                fit: sharp.fit.cover,
-                width: 800,
-                height: 600
-            })
-            .sharpen()
-            .toBuffer();
+                .rotate()
+                .resize({
+                    fit: sharp.fit.cover,
+                    width: 800,
+                    height: 600
+                })
+                .sharpen()
+                .toBuffer();
 
             res.writeHead(200, { 'Content-Type': 'image/jpeg' });
             res.end(image, 'base64');
@@ -205,15 +205,15 @@ router.get("/photos/profile", async (req, res) => {
             }
 
             var image = await sharp(data)
-            .rotate()
-            .resize({
-                fit: sharp.fit.cover,
-                position: sharp.position.center,
-                width: 500,
-                height: 500
-            })
-            .sharpen()
-            .toBuffer();
+                .rotate()
+                .resize({
+                    fit: sharp.fit.cover,
+                    position: sharp.position.center,
+                    width: 500,
+                    height: 500
+                })
+                .sharpen()
+                .toBuffer();
 
             res.writeHead(200, { 'Content-Type': 'image/jpeg' });
             res.end(image, 'base64');
@@ -232,20 +232,31 @@ router.get("/photos/profile", async (req, res) => {
 router.get("/album/user/:id", async (req, res) => {
     //TODO: Adjust pagination
     try {
-        var albums;
         if (req.query.limit === "4") {
-            albums = await Album.find({ albumOwner: new ObjectId(req.path.id) })
+            const albums = await Album.find({ albumOwner: new ObjectId(req.path.id) })
                 .sort('-creationDate')
                 .select('name description thumbnail')
                 .limit(req.query.limit);
+            res.send(albums);
         } else {
-            albums = await Album.find({ albumOwner: new ObjectId(req.path.id) })
+            var albums = await Album.find({ albumOwner: new ObjectId(req.path.id) })
                 .sort('-creationDate')
-                .select('name description thumbnail')
+                .select('name description thumbnail creationDate')
                 .skip((req.query.skip - 1) * req.query.limit)
                 .limit(req.query.limit);
+
+            Album.find({ albumOwner: new ObjectId(req.path.id) }).count(function (err, count) {
+                //albums.total = results;
+                var pagination = {};
+                pagination.elements = count;
+                pagination.totalPages = Math.ceil(count / req.query.limit);
+                var response = {
+                    albums: albums,
+                    pagination: pagination
+                };
+                res.send(response);
+            });
         }
-        res.send(albums);
     } catch (error) {
         console.error(error);
         res.status(500).end();
