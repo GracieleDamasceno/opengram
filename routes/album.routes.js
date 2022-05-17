@@ -516,8 +516,13 @@ router.patch("/album/:id", async (req, res) => {
             return;
         }
 
-        album.name = req.body.name;
-        album.description = req.body.description;
+        if (req.body.name) {
+            album.name = req.body.name;
+        }
+        
+        if (req.body.description) {
+            album.description = req.body.description;
+        }
 
         album.save(function (error) {
             if (error) {
