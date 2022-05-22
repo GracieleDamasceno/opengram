@@ -8,7 +8,6 @@ const User = require("../model/user.model.js");
 router.post("/account/join", async (req, res) => {
     console.log("[LOG] - Request to create a new user: ", req.body)
     try {
-        //TODO: Remove e-mail address and promote login by username
         const userUsername = await User.findOne({ username: req.body.username });
         if (!userUsername) {
             const hashedPassword = await bcrypt.hash(req.body.password, 10);
@@ -16,8 +15,9 @@ router.post("/account/join", async (req, res) => {
                 firstName: req.body.firstName,
                 lastName: req.body.lastName,
                 username: req.body.username,
-                email: req.body.email,
                 password: hashedPassword,
+                randomCoverPhoto: true,
+                profilePhoto: "/opengram/assets/default.png"
             });
 
             const userAlbum = path.join(__dirname, '..', "/files/albums/" + insertUser._id);

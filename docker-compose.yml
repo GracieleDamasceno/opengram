@@ -1,13 +1,16 @@
-version: '3'
+version: '3.5'
 services:
   app:
     build:
       context: . 
       dockerfile: Dockerfile
-    image: nodejs
+    command: npm run dev      
+    image: opengram
     container_name: opengram
     restart: unless-stopped
     env_file: .env
+    depends_on:
+      - mongo
     environment:
       - MONGO_USERNAME=$MONGO_USERNAME
       - MONGO_PASSWORD=$MONGO_PASSWORD
@@ -41,6 +44,7 @@ services:
 
 networks:
   opengram-network:
+    name: custom_opengram
     driver: bridge
 volumes:
   dbdata:

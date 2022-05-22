@@ -161,7 +161,9 @@ router.get("/photos/cover", async (req, res) => {
 
         fs.readFile(imagePath, async function (error, data) {
             if (error) {
-                throw new Error("Error retrieving cover photo from user" + req.query.user + ": " + error);
+                // throw new Error("Error retrieving cover photo from user" + req.query.user + ": " + error);
+                res.status(404).end();
+                return;
             }
 
             var image = await sharp(data)
@@ -197,11 +199,18 @@ router.get("/photos/profile", async (req, res) => {
             return;
         }
 
-        const imagePath = `${user.albumPath}/${user.profilePhoto}`;
-
+        var imagePath;
+        if (user.profilePhoto.indexOf("/opengram/assets") == 0) {
+            imagePath = `${user.profilePhoto}`;
+        } else {
+            imagePath = `${user.albumPath}/${user.profilePhoto}`;
+        }
+        console.log(imagePath)
         fs.readFile(imagePath, async function (error, data) {
             if (error) {
-                throw new Error("Error retrieving profile photo from user" + req.query.user + ": " + error);
+                res.status(404).end();
+                return;
+                //throw new Error("Error retrieving profile photo res.from user" + req.query.user + ": " + error);
             }
 
             var image = await sharp(data)
@@ -230,23 +239,21 @@ router.get("/photos/profile", async (req, res) => {
 // Endpoint used to retrieve albums info based on pagination
 ///
 router.get("/album/user/:id", async (req, res) => {
-    //TODO: Adjust pagination
     try {
         if (req.query.limit === "4") {
-            const albums = await Album.find({ albumOwner: new ObjectId(req.path.id) })
+            const albums = await Album.find({ owner: new ObjectId(req.path.id) })
                 .sort('-creationDate')
                 .select('name description thumbnail')
                 .limit(req.query.limit);
             res.send(albums);
         } else {
-            var albums = await Album.find({ albumOwner: new ObjectId(req.path.id) })
+            var albums = await Album.find({ owner: new ObjectId(req.path.id) })
                 .sort('-creationDate')
                 .select('name description thumbnail creationDate')
                 .skip((req.query.skip - 1) * req.query.limit)
                 .limit(req.query.limit);
 
-            Album.find({ albumOwner: new ObjectId(req.path.id) }).count(function (err, count) {
-                //albums.total = results;
+            Album.find({ owner: new ObjectId(req.path.id) }).count(function (err, count) {
                 var pagination = {};
                 pagination.elements = count;
                 pagination.totalPages = Math.ceil(count / req.query.limit);
@@ -354,7 +361,9 @@ router.get("/photo/file", async (req, res) => {
 
         fs.readFile(imagePath, function (error, data) {
             if (error) {
-                throw new Error("Error retrieving photo " + req.query.photo + ": " + error);
+                res.status(404).end();
+                return;
+                //throw new Error("Error retrieving photo " + req.query.photo + ": " + error);
             }
             res.writeHead(200, { 'Content-Type': 'image/jpeg' });
             res.end(data, 'base64');
@@ -519,7 +528,7 @@ router.patch("/album/:id", async (req, res) => {
         if (req.body.name) {
             album.name = req.body.name;
         }
-        
+
         if (req.body.description) {
             album.description = req.body.description;
         }

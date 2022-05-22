@@ -1,8 +1,8 @@
 .gitignore
 .env
 .lh
-.docs
-.data
-.files
-.node_modules
+docs
+data
+files
+node_modules
 README.md
