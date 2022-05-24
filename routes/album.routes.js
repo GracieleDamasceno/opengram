@@ -21,7 +21,9 @@ const multerStorage = multer.diskStorage({
     destination: async function (req, file, cb) {
         const request = JSON.parse(req.body.albumInfo);
         if (!request.user) {
-            throw new Error("Error while uploading photo: user undefined")
+            console.log("Error while uploading photo: user undefined");
+            res.status(500).end();
+            return;
         }
         const albumLocation = await getAlbumLocation(request.user);
         fs.mkdirSync(albumLocation, { recursive: true });
@@ -60,7 +62,9 @@ router.post("/album/create/", upload.single("photo"), async (req, res) => {
 
         await album.save(function (error) {
             if (error) {
-                throw new Error("Error saving album " + request.albumName + ": " + error)
+                console.log("Error saving album " + request.albumName + ": " + error);
+                res.status(500).end();
+                return;
             }
         });
 
@@ -98,7 +102,9 @@ router.post("/photo", upload.any("photos"), async (req, res) => {
             album.photos.push(photo);
             album.save(function (error) {
                 if (error) {
-                    throw new Error("Error uploading photo into album " + request.albumName + ": " + error)
+                    console.log("Error uploading photo into album " + request.albumName + ": " + error);
+                    res.status(500).end();
+                    return;
                 }
             });
         }));
@@ -122,7 +128,9 @@ router.post("/photos/profile", upload.single("photos"), async (req, res) => {
     user.profilePhoto = photoToUpload.filename;
     user.save(function (error) {
         if (error) {
-            throw new Error("Error updating profile photo" + error)
+            console.log("Error updating profile photo" + error);
+            res.status(500).end();
+            return;
         }
     });
     res.status(202).end();
@@ -139,7 +147,9 @@ router.post("/photos/cover", upload.single("photos"), async (req, res) => {
     user.coverPhoto = photoToUpload.filename;
     user.save(function (error) {
         if (error) {
-            throw new Error("Error updating cover photo" + error)
+            console.log("Error updating cover photo" + error);
+            res.status(500).end();
+            return;
         }
     });
     res.status(202).end();
@@ -205,7 +215,6 @@ router.get("/photos/profile", async (req, res) => {
         } else {
             imagePath = `${user.albumPath}/${user.profilePhoto}`;
         }
-        console.log(imagePath)
         fs.readFile(imagePath, async function (error, data) {
             if (error) {
                 res.status(404).end();
@@ -241,19 +250,19 @@ router.get("/photos/profile", async (req, res) => {
 router.get("/album/user/:id", async (req, res) => {
     try {
         if (req.query.limit === "4") {
-            const albums = await Album.find({ owner: new ObjectId(req.path.id) })
+            const albums = await Album.find({ owner: new ObjectId(req.params.id) })
                 .sort('-creationDate')
                 .select('name description thumbnail')
                 .limit(req.query.limit);
             res.send(albums);
         } else {
-            var albums = await Album.find({ owner: new ObjectId(req.path.id) })
+            var albums = await Album.find({ owner: new ObjectId(req.params.id) })
                 .sort('-creationDate')
                 .select('name description thumbnail creationDate')
                 .skip((req.query.skip - 1) * req.query.limit)
                 .limit(req.query.limit);
 
-            Album.find({ owner: new ObjectId(req.path.id) }).count(function (err, count) {
+            Album.find({ owner: new ObjectId(req.params.id) }).count(function (err, count) {
                 var pagination = {};
                 pagination.elements = count;
                 pagination.totalPages = Math.ceil(count / req.query.limit);
@@ -358,6 +367,7 @@ router.get("/photo/file", async (req, res) => {
 
         const photo = album.photos.id(req.query.photo);
         const imagePath = `${album.path}/${photo.file}`;
+        console.log(imagePath)
 
         fs.readFile(imagePath, function (error, data) {
             if (error) {
@@ -384,11 +394,14 @@ async function deleteAllFilesPromise(album) {
             const photos = album.photos;
             photos.map(async (photo) => {
                 const imagePath = `${album.path}/${photo.file}`;
-                fs.unlinkSync(imagePath);
+                fs.unlinkSync(imagePath, function (err){
+                    if (err){
+                        console.log("Error deleting file: "+err)
+                    }
+                });
             });
             resolve("Photos deleted");
         } catch (error) {
-            console.error(error);
             reject(error);
         }
     });
@@ -400,11 +413,14 @@ async function deleteFilesPromise(album, photos) {
             photos.map(async (photo) => {
                 const photoInfo = album.photos.id(photo.id);
                 const imagePath = `${album.path}/${photoInfo.file}`;
-                fs.unlinkSync(imagePath);
+                fs.unlinkSync(imagePath, function (err){
+                    if (err){
+                        console.log("Error deleting file: "+err)
+                    }
+                });
             });
             resolve("Photos deleted");
         } catch (error) {
-            console.error(error);
             reject(error);
         }
     });
@@ -422,12 +438,11 @@ async function deletePhotosPromise(album, photos) {
             });
             album.save(function (error) {
                 if (error) {
-                    throw new Error("Error deleting photos from album " + album._id + ": " + error)
+                    console.log("Error deleting photos from album " + album._id + ": " + error)
                 }
             });
             resolve("Photos deleted");
         } catch (error) {
-            console.error(error);
             reject(error);
         }
     });
@@ -450,7 +465,6 @@ router.delete("/album/:id", async (req, res) => {
             .then(res.status(200).end());
 
     } catch (error) {
-        console.log(error);
         res.status(500).end();
     }
 
@@ -501,7 +515,9 @@ router.patch("/photo/album/:id", async (req, res) => {
         album.photos.push(photo);
         album.save(function (error) {
             if (error) {
-                throw new Error("Error updating information of photo " + req.query.photo + ": " + error)
+                console.log("Error updating information of photo " + req.query.photo + ": " + error);
+                res.status(500).end();
+                return;
             }
         });
 
@@ -535,7 +551,9 @@ router.patch("/album/:id", async (req, res) => {
 
         album.save(function (error) {
             if (error) {
-                throw new Error("Error updating information of album " + req.params.id + ": " + error)
+                console.log("Error updating information of album " + req.params.id + ": " + error);
+                res.status(500).end();
+                return;
             }
         });
 

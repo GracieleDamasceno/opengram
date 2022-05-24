@@ -47,5 +47,4 @@ networks:
     name: custom_opengram
     driver: bridge
 volumes:
-  dbdata:
   node_modules:  
