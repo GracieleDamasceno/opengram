@@ -6,8 +6,19 @@ To check the front-end, access [Opengram Front](https://github.com/GracieleDamas
 
 ## Installation
 
-To be added.
+### Running locally through Docker
+First, execute the following commands at the root of [Opengram](https://github.com/GracieleDamasceno/opengram) local folder:
 
+```
+docker build . -t opengram
+docker-compose up -d 
+```
+
+With the project up and running, execute the following commands at the root of [Opengram Front](https://github.com/GracieleDamasceno/opengram-front) local folder:
+```
+docker build . -t opengram-front
+docker-compose up -d
+```
 
 ## Contributing
 
